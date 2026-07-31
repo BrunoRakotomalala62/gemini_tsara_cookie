@@ -1,0 +1,25 @@
+# Fichiers sensibles — NE JAMAIS COMMITTER
+cookies.txt
+gemini-cookies.txt
+gemini-xsrf.txt
+*.cookies
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
