@@ -1,0 +1,22 @@
+{
+  "functions": {
+    "api/gemini.py": {
+      "maxDuration": 60,
+      "memory": 512
+    }
+  },
+  "rewrites": [
+    { "source": "/api/gemini", "destination": "/api/gemini" },
+    { "source": "/api/health", "destination": "/api/gemini" },
+    { "source": "/(.*)", "destination": "/api/gemini" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, OPTIONS" }
+      ]
+    }
+  ]
+}
