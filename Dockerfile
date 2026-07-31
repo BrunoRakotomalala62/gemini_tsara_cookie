@@ -1,5 +1,4 @@
-FROM python:3.11-slim
+FROM python:alpine
+COPY . /app
 WORKDIR /app
-COPY . .
-EXPOSE 8080
 CMD ["python", "gemini-api.py"]
