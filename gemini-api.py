@@ -378,7 +378,11 @@ def main():
             max_connections=CONFIG["pool_maxsize"],
             keepalive_expiry=30,
         )
-        _http_client = httpx.Client(http2=True, limits=limits, timeout=CONFIG["timeout"])
+        try:
+            _http_client = httpx.Client(http2=True, limits=limits, timeout=CONFIG["timeout"])
+        except ImportError:
+            # Fallback HTTP/1.1 si h2 non installé
+            _http_client = httpx.Client(http2=False, limits=limits, timeout=CONFIG["timeout"])
         print(f"✓ httpx HTTP/2 (pool: {CONFIG['pool_connections']})")
     else:
         print("⚠ pip install httpx recommandé")
