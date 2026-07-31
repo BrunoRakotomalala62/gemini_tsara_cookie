@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: gemini-api
+    env: python
+    region: frankfurt
+    plan: free
+    buildCommand: pip install httpx
+    startCommand: python3 gemini-api.py
+    envVars:
+      - key: GEMINI_COOKIES_B64
+        sync: false
+      - key: PORT
+        value: "8080"
