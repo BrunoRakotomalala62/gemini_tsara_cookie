@@ -1,0 +1,24 @@
+# Format : Netscape Cookie File
+# Export depuis Chrome/Edge : Application → Cookies → gemini.google.com
+#
+# Cookies REQUIS (minimum) :
+#   .google.com → SID, __Secure-1PSID, HSID, SSID, APISID, SAPISID
+#   .gemini.google.com → COMPASS
+#
+# ⚠️  REMPLACE les valeurs ci-dessous par TES vrais cookies
+# ⚠️  NE COMMITTE JAMAIS les vrais cookies sur GitHub !
+
+# --- Cookies .google.com (authentification Google) ---
+.google.com	TRUE	/	FALSE	9999999999	SID	REMPLACE_PAR_TON_SID
+.google.com	TRUE	/	TRUE	9999999999	__Secure-1PSID	REMPLACE_PAR_TON_1PSID
+.google.com	TRUE	/	FALSE	9999999999	HSID	REMPLACE_PAR_TON_HSID
+.google.com	TRUE	/	TRUE	9999999999	SSID	REMPLACE_PAR_TON_SSID
+.google.com	TRUE	/	FALSE	9999999999	APISID	REMPLACE_PAR_TON_APISID
+.google.com	TRUE	/	TRUE	9999999999	SAPISID	REMPLACE_PAR_TON_SAPISID
+
+# --- Cookies .gemini.google.com ---
+.gemini.google.com	TRUE	/	TRUE	9999999999	COMPASS	gemini-pd=REMPLACE_PAR_TON_GEMINI_PD:gemini-hl=REMPLACE_PAR_TON_GEMINI_HL
+
+# --- Optionnel ---
+.google.com	TRUE	/	TRUE	9999999999	SIDCC	REMPLACE_PAR_TON_SIDCC
+.google.com	TRUE	/	TRUE	9999999999	__Secure-1PSIDCC	REMPLACE_PAR_TON_1PSIDCC
