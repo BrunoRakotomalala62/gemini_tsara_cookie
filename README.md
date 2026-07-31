@@ -14,53 +14,91 @@
 - 🎯 **4 modèles** — Flash, Thinking, Pro, Auto
 - 📦 **Single-file** — un seul fichier Python, zéro dépendance obligatoire
 - 🏠 **Serveur HTTP intégré** — pas besoin de Nginx, Flask, ou FastAPI
+- 🔐 **Env vars ready** — cookies en `GEMINI_COOKIES_B64` (base64), compatible Railway/Render/Fly.io
 
 ## 📦 Installation
 
 ```bash
-# Optionnel mais recommandé pour les perfs (HTTP/2)
-pip install httpx
-
-# Sinon, l'API fonctionne avec urllib (stdlib Python)
+git clone https://github.com/BrunoRakotomalala62/gemini_tsara_cookie.git
+cd gemini_tsara_cookie
+pip install httpx  # optionnel mais recommandé
 ```
 
 ## 🔧 Configuration
 
-### 1. Récupérer tes cookies Google
-
-1. Va sur [gemini.google.com](https://gemini.google.com) et connecte-toi
-2. Ouvre DevTools (F12) → Application → Cookies → `https://gemini.google.com`
-3. Copie les cookies suivants : `SID`, `__Secure-1PSID`, `HSID`, `SSID`, `APISID`, `SAPISID`, `COMPASS`
-4. Utilise une extension "Export Cookies" ou copie-les manuellement
-
-### 2. Créer le fichier cookies
+### Méthode 1 : Variable d'environnement (recommandé pour déploiement)
 
 ```bash
+# Génère le base64 de ton fichier cookies
+export GEMINI_COOKIES_B64=$(base64 -w0 cookies.txt)
+
+# Lance le serveur
+python3 gemini-api.py
+```
+
+### Méthode 2 : Fichier local
+
+```bash
+# Récupère tes cookies depuis gemini.google.com (DevTools → Application → Cookies)
 cp cookies.txt.example cookies.txt
 # Édite cookies.txt avec tes vrais cookies
+python3 gemini-api.py 8080 cookies.txt
 ```
 
-Format (Netscape) :
-```
-.google.com    TRUE    /    FALSE    9999999999    SID    g.a000BAl...
-.google.com    TRUE    /    TRUE     9999999999    __Secure-1PSID    g.a000BAl...
-```
+## 🚀 Déploiement
 
-## 🚀 Lancement
+### Railway
 
 ```bash
-python3 gemini-api.py [port] [cookies.txt]
+# Variables d'environnement :
+GEMINI_COOKIES_B64=<ton-base64>
+PORT=8080
 
-# Exemples :
-python3 gemini-api.py                          # port 8080, cookies.txt
-python3 gemini-api.py 3000 mon-cookies.txt     # port 3000, fichier perso
+# Start command:
+pip install httpx && python3 gemini-api.py
+```
+
+### Render
+
+```yaml
+# render.yaml ou via le dashboard :
+services:
+  - type: web
+    name: gemini-api
+    env: python
+    buildCommand: pip install httpx
+    startCommand: python3 gemini-api.py
+    envVars:
+      - key: GEMINI_COOKIES_B64
+        sync: false  # secret — à mettre dans le dashboard
+```
+
+### Fly.io
+
+```bash
+fly secrets set GEMINI_COOKIES_B64="$(base64 -w0 cookies.txt)"
+fly deploy
+```
+
+### Docker
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY gemini-api.py requirements.txt ./
+RUN pip install httpx
+EXPOSE 8080
+CMD ["python3", "gemini-api.py"]
+```
+
+```bash
+docker build -t gemini-api .
+docker run -p 8080:8080 -e GEMINI_COOKIES_B64="$(base64 -w0 cookies.txt)" gemini-api
 ```
 
 ## 📡 Endpoints
 
 ### `GET /api/gemini`
-
-Envoie un prompt à Gemini et retourne la réponse.
 
 | Paramètre | Requis | Défaut | Description |
 |-----------|--------|--------|-------------|
@@ -69,21 +107,16 @@ Envoie un prompt à Gemini et retourne la réponse.
 | `model` | non | `flash` | `flash` / `thinking` / `pro` / `auto` |
 
 ```bash
-# Test simple
 curl "http://localhost:8080/api/gemini?prompt=Bonjour&uid=123"
-
-# Avec modèle thinking
-curl "http://localhost:8080/api/gemini?prompt=Explique%20la%20relativité&model=thinking"
 ```
 
-**Réponse :**
 ```json
 {
   "success": true,
   "uid": "123",
   "prompt": "Bonjour",
   "model": "flash",
-  "response": "Bonjour ! Comment puis-je vous aider aujourd'hui ?",
+  "response": "Bonjour ! Comment puis-je vous aider ?",
   "elapsed_ms": 4123
 }
 ```
@@ -99,67 +132,37 @@ curl "http://localhost:8080/api/health"
   "status": "ok",
   "models": ["flash", "thinking", "pro", "auto"],
   "xsrf_cached": true,
-  "xsrf_age_s": 42,
   "cookies_loaded": 13,
-  "http_backend": "httpx"
+  "http_backend": "httpx",
+  "cookie_source": "env:GEMINI_COOKIES_B64"
 }
 ```
 
 ## 🧠 Architecture
 
 ```
+┌──────────────────┐    GEMINI_COOKIES_B64     ┌──────────────────┐
+│  Env vars        │ ─────────────────────────→│  load_cookies()  │
+│  (base64)        │                           │  → dict Python   │
+└──────────────────┘                           └──────────────────┘
+                                                        │
 ┌──────────────┐     auto-extraction      ┌──────────────────┐
 │  Cache XSRF  │ ←──────────────────────── │ gemini.google.com │
 │  (mémoire)   │     toutes les 30min      │   (page HTML)    │
 └──────────────┘                           └──────────────────┘
        │
-       │ fournit token SNlM0e
        ▼
 ┌──────────────────────────────────────────────────────────┐
-│  API v2 (port 8080)                                      │
+│  API v3 (port 8080)                                      │
 │  GET /api/gemini?prompt=...&uid=...&model=flash           │
-│  → HTTP/2 keep-alive vers Gemini StreamGenerate           │
-│  → Parsing optimisé de la réponse                         │
-│  → ~4s par requête (dont ~2-3s génération Gemini)         │
 └──────────────────────────────────────────────────────────┘
 ```
 
 ## 🔒 Sécurité
 
-- ⚠️ **Ne jamais committer `cookies.txt`** — les cookies donnent accès à ton compte Google !
-- Le `.gitignore` exclut automatiquement les fichiers de cookies
-- Les cookies SID/__Secure-1PSID sont des tokens de session — traite-les comme des mots de passe
-- Utilise un compte Google dédié si tu exposes cette API sur un réseau
-
-## 🛠 Maintenance
-
-### Token XSRF
-
-Le token `SNlM0e` expire toutes les quelques heures. **L'API l'extrait automatiquement** — aucun refresh manuel nécessaire.
-
-### Session Google
-
-Les cookies SID expirent en théorie en 2027-2028, mais Google peut révoquer la session. Pour éviter ça, une tâche planifiée (cron) peut visiter Gemini périodiquement :
-
-```bash
-# Toutes les 4h, touche la session
-0 */4 * * * curl -s -b cookies.txt https://gemini.google.com/app > /dev/null
-```
-
-### Build label (`gemini_bl`)
-
-Si l'API retourne des 400, le build label a peut-être changé. Mets-le à jour :
-
-```bash
-python3 gemini-api.py --bl "boq_assistant-bard-web-server_YYYYMMDD.xx_p0"
-```
-
-## 📋 Dépendances
-
-| Package | Requis | Rôle |
-|---------|--------|------|
-| `httpx` | Optionnel | HTTP/2 + keep-alive (recommandé) |
-| stdlib Python | ✅ | urllib, json, hashlib, threading |
+- ⚠️ **Ne jamais committer `cookies.txt`** — les cookies donnent accès à ton compte Google
+- Utilise **GEMINI_COOKIES_B64** en variable d'environnement (jamais dans le code)
+- Les plateformes de déploiement (Railway, Render) ont des "secrets" chiffrés
 
 ## ⚡ Performance
 
@@ -168,13 +171,12 @@ python3 gemini-api.py --bl "boq_assistant-bard-web-server_YYYYMMDD.xx_p0"
 | Temps moyen | ~5s | ~4s |
 | Connexions | 1 par requête | Pool de 10 réutilisées |
 | Protocole | HTTP/1.1 | HTTP/2 |
-| Parsing | Re-compilé | Pré-compilé |
 
 > Le goulot principal (~2-3s) est le temps de génération de Gemini — incompressible.
 
 ## 📄 Licence
 
-MIT — utilise, modifie, partage librement.
+MIT
 
 ---
 
