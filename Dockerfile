@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 WORKDIR /app
-COPY gemini-api.py requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+RUN pip install --no-cache-dir httpx
 EXPOSE 8080
-CMD ["python3", "gemini-api.py"]
+CMD ["python", "gemini-api.py"]
